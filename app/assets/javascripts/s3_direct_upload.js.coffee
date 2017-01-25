@@ -42,11 +42,13 @@ $.fn.S3Uploader = (options) ->
   setUploadForm = ->
     $uploadForm.find("input[type='file']").fileupload
 
+      replaceFileInput: settings.replaceFileInput
+
       add: (e, data) ->
         file = data.files[0]
         file.unique_id = Math.random().toString(36).substr(2,16)
 
-        unless settings.before_add and not settings.before_add(file)
+        addFiles = ->
           current_files.push data
           if $('#template-upload').length > 0
             data.context = $($.trim(tmpl("template-upload", file)))
@@ -60,6 +62,15 @@ $.fn.S3Uploader = (options) ->
               forms_for_submit = [data]
           else
             data.submit()
+
+        if settings.before_add
+          settings.before_add(file).then(
+            addFiles,
+            (data) ->
+              $uploadForm.trigger("s3_upload_failed", [data])
+          )
+        else
+          addFiles()
 
       start: (e) ->
         $uploadForm.trigger("s3_uploads_start", [e])
